@@ -4,8 +4,6 @@ using BepInEx.Configuration;
 using UnityEngine;
 
 namespace BotCMDs
-
-    // BUG: Sometimes has trouble reading the first line as a command, especially if there's no \n afterwards (the python bot adds this though)
 {
     [BepInDependency("com.bepis.r2api")]
     [BepInPlugin("com.Rayss.BotCommands", "Bot Commands", "0.1.0")]
@@ -48,9 +46,6 @@ namespace BotCMDs
 
                 while ((line = reader.ReadLine()) != null)
                     RoR2.Console.instance.SubmitCmd(null, line);
-
-                //update the last max offset
-                lastMaxOffset = reader.BaseStream.Position;
             }
         }
     }
