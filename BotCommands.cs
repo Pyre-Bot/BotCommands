@@ -1,17 +1,18 @@
-﻿using System.IO;
-using BepInEx;
+﻿using BepInEx;
 using BepInEx.Configuration;
+using System.IO;
+using System.Threading.Tasks;
 using UnityEngine;
 
 namespace BotCMDs
 {
     [BepInDependency("com.bepis.r2api")]
-    [BepInPlugin("com.Rayss.BotCommands", "Bot Commands", "0.1.0")]
+    [BepInPlugin("com.Rayss.BotCommands", "BotCommands", "0.1.1")]
     public class BotCommands : BaseUnityPlugin
     {
-
         // Config
         private static ConfigEntry<string> Cmdpath { get; set; }
+
         private string botcmd_path;
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Code Quality", "IDE0051:Remove unused private members")]
@@ -29,14 +30,14 @@ namespace BotCMDs
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Code Quality", "IDE0051:Remove unused private members")]
-        private void Update()
+        private async void Update()
         {
             using (StreamReader reader = new StreamReader(new FileStream(botcmd_path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)))
             {
                 //start at the end of the file
                 long lastMaxOffset = reader.BaseStream.Length;
 
-                System.Threading.Thread.Sleep(100);
+                await Task.Delay(5000);
 
                 //seek to the last max offset
                 reader.BaseStream.Seek(lastMaxOffset, SeekOrigin.Begin);
