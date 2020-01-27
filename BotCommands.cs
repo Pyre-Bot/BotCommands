@@ -15,7 +15,7 @@ namespace BotCMDs
         private string botcmd_path;
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Code Quality", "IDE0051:Remove unused private members")]
-        private void Awake()
+        public void Awake()
         {
             Cmdpath = Config.Bind<string>(
             "Config",
@@ -36,7 +36,7 @@ namespace BotCMDs
                 //start at the end of the file
                 long lastMaxOffset = reader.BaseStream.Length;
 
-                System.Threading.Thread.Sleep(4);
+                System.Threading.Thread.Sleep(20);
 
                 //seek to the last max offset
                 reader.BaseStream.Seek(lastMaxOffset, SeekOrigin.Begin);
