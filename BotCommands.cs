@@ -26,7 +26,6 @@ namespace BotCMDs
             botcmd_path = Cmdpath.Value;
 
             Debug.Log("Created by Rayss and InfernalPlacebo.");
-
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Code Quality", "IDE0051:Remove unused private members")]
@@ -35,14 +34,6 @@ namespace BotCMDs
             Reading();
         }
 
-        /**
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Code Quality", "IDE0051:Remove unused private members")]
-        private void Update()
-        {
-
-        }
-        **/
-
         private async void Reading()
         {
             using (StreamReader reader = new StreamReader(new FileStream(botcmd_path,
@@ -50,20 +41,16 @@ namespace BotCMDs
             {
                 //start at the end of the file
                 long lastMaxOffset = reader.BaseStream.Length;
+                string line;
 
                 while (true)
                 {
                     await Task.Delay(1000);
 
-                    //if the file size has not changed, idle (RAYSS NOTE: MAY NOT BE NEEDED)
-                        if (reader.BaseStream.Length == lastMaxOffset)
-                            continue;
-
                     //seek to the last max offset
                     reader.BaseStream.Seek(lastMaxOffset, SeekOrigin.Begin);
 
                     //read out of the file until the EOF
-                    string line = "";
                     while ((line = reader.ReadLine()) != null)
                         RoR2.Console.instance.SubmitCmd(null, line);
 
