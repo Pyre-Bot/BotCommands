@@ -1,6 +1,7 @@
 ﻿using BepInEx;
 using BepInEx.Configuration;
 using System.IO;
+using System.Threading.Tasks;
 using UnityEngine;
 
 namespace BotCMDs
@@ -11,11 +12,10 @@ namespace BotCMDs
     {
         // Config
         private static ConfigEntry<string> Cmdpath { get; set; }
-
         private string botcmd_path;
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Code Quality", "IDE0051:Remove unused private members")]
-        public void Awake()
+        private void Awake()
         {
             Cmdpath = Config.Bind<string>(
             "Config",
@@ -26,26 +26,50 @@ namespace BotCMDs
             botcmd_path = Cmdpath.Value;
 
             Debug.Log("Created by Rayss and InfernalPlacebo.");
+
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Code Quality", "IDE0051:Remove unused private members")]
+        private void Start()
+        {
+            Reading();
+        }
+
+        /**
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Code Quality", "IDE0051:Remove unused private members")]
         private void Update()
         {
-            using (StreamReader reader = new StreamReader(new FileStream(botcmd_path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)))
+
+        }
+        **/
+
+        private async void Reading()
+        {
+            using (StreamReader reader = new StreamReader(new FileStream(botcmd_path,
+                     FileMode.Open, FileAccess.Read, FileShare.ReadWrite)))
             {
                 //start at the end of the file
                 long lastMaxOffset = reader.BaseStream.Length;
 
-                System.Threading.Thread.Sleep(20);
+                while (true)
+                {
+                    await Task.Delay(1000);
 
-                //seek to the last max offset
-                reader.BaseStream.Seek(lastMaxOffset, SeekOrigin.Begin);
+                    //if the file size has not changed, idle (RAYSS NOTE: MAY NOT BE NEEDED)
+                        if (reader.BaseStream.Length == lastMaxOffset)
+                            continue;
 
-                //read out of the file until the EOF
-                string line = "";
+                    //seek to the last max offset
+                    reader.BaseStream.Seek(lastMaxOffset, SeekOrigin.Begin);
 
-                while ((line = reader.ReadLine()) != null)
-                    RoR2.Console.instance.SubmitCmd(null, line);
+                    //read out of the file until the EOF
+                    string line = "";
+                    while ((line = reader.ReadLine()) != null)
+                        RoR2.Console.instance.SubmitCmd(null, line);
+
+                    //update the last max offset
+                    lastMaxOffset = reader.BaseStream.Position;
+                }
             }
         }
     }
