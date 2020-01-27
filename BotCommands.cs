@@ -1,7 +1,6 @@
 ﻿using BepInEx;
 using BepInEx.Configuration;
 using System.IO;
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace BotCMDs
@@ -16,7 +15,7 @@ namespace BotCMDs
         private string botcmd_path;
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Code Quality", "IDE0051:Remove unused private members")]
-        public void Awake()
+        private void Awake()
         {
             Cmdpath = Config.Bind<string>(
             "Config",
@@ -30,14 +29,14 @@ namespace BotCMDs
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Code Quality", "IDE0051:Remove unused private members")]
-        private async void Update()
+        private void Update()
         {
             using (StreamReader reader = new StreamReader(new FileStream(botcmd_path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)))
             {
                 //start at the end of the file
                 long lastMaxOffset = reader.BaseStream.Length;
 
-                await Task.Delay(5000);
+                System.Threading.Thread.Sleep(4);
 
                 //seek to the last max offset
                 reader.BaseStream.Seek(lastMaxOffset, SeekOrigin.Begin);
