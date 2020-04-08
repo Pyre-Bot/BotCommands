@@ -1,0 +1,8 @@
+﻿["totalTimeAlive"]=23.0000011995435
+["totalKills"]=0
+["totalDeaths"]=0
+["totalGoldCollected"]=15
+["totalDistanceTraveled"]=2520.38142833216
+["totalItemsCollected"]=1
+["totalStagesCompleted"]=0
+["totalPurchases"]=0

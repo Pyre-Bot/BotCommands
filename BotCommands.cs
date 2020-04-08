@@ -35,6 +35,7 @@ namespace BotCMDs
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Code Quality", "IDE0051:Remove unused private members")]
         private void Start()
         {
+            StartHooks();
             Reading();
         }
 
@@ -56,24 +57,58 @@ namespace BotCMDs
 
                     //read out of the file until the EOF
                     while ((line = reader.ReadLine()) != null)
-                        RoR2.Console.instance.SubmitCmd(null, line);
+                    {
+                        // Exception handling, I guess
+                        try
+                        {
+                            RoR2.Console.instance.SubmitCmd(null, line);
+                        }
+                        catch
+                        {
+                            Debug.Log("No sir, partner.");
+                        }
+                    }
 
                     //update the last max offset
                     lastMaxOffset = reader.BaseStream.Position;
                 }
             }
         }
-    
 
-        public static void InitializeHooks()
+
+        public static void StartHooks()
         {
             // On run end
+            // LogTime and LogStagesCleared won't be needed after stats are done
             On.RoR2.RunReport.Generate += (orig, run, resulttype) =>
             {
                 RunReport valid = orig(run, resulttype); // Required if the hooked command has a return value
+
+                foreach (var user in NetworkUser.readOnlyInstancesList)
+                {
+                    GetStats(user);
+                }
+
                 LogTime();
                 LogStagesCleared();
                 return valid; // Required if the hooked command has a return value
+            };
+
+            // On player leave
+            // NOTE: Ensure that if a player joins and leaves multiple times during a run, their stats aren't reset. Maybe cache the stats for each player in the run locally and only upload to the DB when the run ends
+            // Alternatively, make it so stats are only logged if you complete a run (aka delete this hook)
+            // LogTime and LogStagesCleared won't be needed after stats are done
+            On.RoR2.Networking.GameNetworkManager.OnServerDisconnect += (orig, run, conn) =>
+            {
+                if (Run.instance)
+                {
+                    NetworkUser user = FindNetworkUserForConnectionServer(conn);
+                    GetStats(user);
+
+                    LogTime();
+                    LogStagesCleared();
+                }
+                orig(run, conn);
             };
 
             // On scene change (unloaded, new scene not yet loaded)
@@ -88,6 +123,7 @@ namespace BotCMDs
             };
 
             // On player join
+            // Will be removed on new stat tracking
             On.RoR2.Networking.GameNetworkManager.OnServerConnect += (orig, run, conn) =>
             {
                 orig(run, conn);
@@ -97,38 +133,9 @@ namespace BotCMDs
                     LogStagesCleared();
                 }
             };
-
-            // On player leave
-            // Currently works when they leave mid-game
-            // Needs to be used for end of game as well, changed to support each player (will have to retrieve all networkusers)
-            // NOTE: Ensure that if a player joins and leaves multiple times during a game, their stats aren't multiplied. Maybe cache the stats for each player in the run locally and only upload to the DB when the run ends
-            On.RoR2.Networking.GameNetworkManager.OnServerDisconnect += (orig, run, conn) =>
-            {
-                if (Run.instance)
-                {
-                    // Stats
-                    NetworkUser user = FindNetworkUserForConnectionServer(conn);
-                    GameObject playerMasterObject = user.masterObject;
-                    StatSheet statSheet;
-                    PlayerStatsComponent component = playerMasterObject.GetComponent<PlayerStatsComponent>();
-                    statSheet = ((component != null) ? component.currentStats : null);
-                    // Print the statsheet to console / log
-                    // Will be changing this to parse and add to the database
-                    // Don't need all the stats they access though, should only use some of the fields (may be able to split up by category)
-                    string[] array = new string[statSheet.fields.Length];
-                    for (int i = 0; i < array.Length; i++)
-                    {
-                        array[i] = string.Format("[\"{0}\"]={1}", statSheet.fields[i].name, statSheet.fields[i].ToString());
-                    }
-                    Debug.Log(string.Join("\n", array));
-
-                    LogTime();
-                    LogStagesCleared();
-                }
-                orig(run, conn);
-            };
         }
 
+        // Will be removed on new stat tracking
         private static void LogTime()
         {
             if (!Run.instance)
@@ -138,6 +145,7 @@ namespace BotCMDs
             Debug.Log("Run time is " + Run.instance.GetRunStopwatch().ToString());
         }
 
+        // Will be removed on new stat tracking
         private static void LogStagesCleared()
         {
             if (!Run.instance)
@@ -145,6 +153,24 @@ namespace BotCMDs
                 throw new ConCommandException("No run is currently in progress.");
             }
             Debug.Log("Stages cleared: " + Run.instance.NetworkstageClearCount.ToString());
+        }
+
+        private static void GetStats(NetworkUser user)
+        {
+            GameObject playerMasterObject = user.masterObject;
+            StatSheet statSheet;
+            PlayerStatsComponent component = playerMasterObject.GetComponent<PlayerStatsComponent>();
+            statSheet = (component?.currentStats);
+            // Print the statsheet to console / log
+            // Will be changing this to parse and add to the database
+            // Don't need all the stats they access though, should only use some of the fields (may be able to split up by category)
+            string[] array = new string[statSheet.fields.Length];
+            for (int i = 0; i < array.Length; i++)
+            {
+                array[i] = string.Format("[\"{0}\"]={1}", statSheet.fields[i].name, statSheet.fields[i].ToString());
+            }
+            // Literally all I have to do is parse the array to be used by the db
+            Debug.Log(string.Join("\n", array));
         }
 
         // Borrowed from R2DSEssentials.Util.Networking
