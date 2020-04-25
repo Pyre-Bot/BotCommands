@@ -12,7 +12,6 @@ using RoR2;
 using RoR2.Stats;
 using UnityEngine.Networking;
 using System.Threading.Tasks;
-using Console = RoR2.Console;
 using Debug = UnityEngine.Debug;
 using Path = System.IO.Path;
 
@@ -21,7 +20,7 @@ namespace BotCMDs
 {
     [BepInDependency("com.bepis.r2api")]
     [BepInPlugin("com.Rayss.BotCommands", "BotCommands", "0.3.0")]
-    public class BotCommands : BaseUnityPlugin
+    public partial class BotCommands : BaseUnityPlugin
     {
         // Config
         private static ConfigEntry<string> Cmdpath { get; set; }
@@ -65,13 +64,19 @@ namespace BotCMDs
         {
             StartHooks();
             Reading();
+            
+            // These are only called if built in debug mode
             OpenExe();
+            RandomString();
         }
 
         private async void Reading()
         {
             // Create botcmd.txt if it doesn't exist yet
             using (StreamWriter w = File.AppendText(_botcmdPath))
+            {
+                w.Close();
+            }
             
             using (StreamReader reader = new StreamReader(new FileStream(_botcmdPath,
                      FileMode.Open, FileAccess.Read, FileShare.ReadWrite)))
@@ -241,33 +246,7 @@ namespace BotCMDs
                 Log.LogError("BotCommands: Unable to find executable file!");
             }
         }
-
-        // Used for debugging database
-        [Conditional("DEBUG")]
-        private static void OpenExe()
-        {
-            var path = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-            ProcessStartInfo startInfo = new ProcessStartInfo();
-            startInfo.CreateNoWindow = true;
-            startInfo.UseShellExecute = false;
-            startInfo.FileName = path + @"\BotCommands_Dynamo.exe";
-            startInfo.WindowStyle = ProcessWindowStyle.Hidden;
-            startInfo.Arguments = "server9 123456789 100 100 100 100 100 100 100 100";
-
-            try
-            {
-                // Start the process with the info we specified.
-                using (Process exeProcess = Process.Start(startInfo))
-                {
-                    Log.LogWarning("BotCommands: Updating stats database!");
-                }
-            }
-            catch
-            {
-                Log.LogError("BotCommands: Unable to find executable file!");
-            }
-        }
-
+        
         // Borrowed from R2DSEssentials.Util.Networking
         private static NetworkUser FindNetworkUserForConnectionServer(NetworkConnection connection)
         {

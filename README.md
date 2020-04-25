@@ -26,6 +26,9 @@ If you want to build from source:
     - Self-Contained .exe file will be located: `repo_directory\bin\Release\netcoreapp3.1\win-x64\publish`
 
 ## Version History
+### 0.3.1
+- Fixed error with botcmd.txt being locked when server is running
+- Moved test functions to dedicated DebugFunctions.cs
 ### 0.3.0
  - Implemented stat tracking directly into the plugin!
     - BotCommands_Dynamo.exe is called from the plugin file when a player leaves the server to update the stats database

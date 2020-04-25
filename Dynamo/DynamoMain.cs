@@ -16,7 +16,6 @@ namespace BotCommands_Dynamo
         private static Table statsTable;
         private static readonly CancellationTokenSource source = new CancellationTokenSource();
         private static readonly CancellationToken token = source.Token;
-
         private static Document stats_record;
 
         //Used to tell if we errored and need to exit
@@ -40,7 +39,6 @@ namespace BotCommands_Dynamo
             var purchases = Convert.ToInt32(Math.Round(Convert.ToDouble(args[9])));
 
             //Variables used for DynamoDB table
-            //Will later be called "server1" or "server2" etc
             const string dbTableName = "BotCommands_Stats";
             var itemAttributes = new List<AttributeDefinition>
             {
