@@ -12,16 +12,16 @@ Can be auto installed via the setup script in [Pyre Bot](https://github.com/Infe
 If you want to build from source:
 - Clone the repo to your computer
 - Remove the dependencies and add new ones matching the path to the files on your computer
-    - Recommendation: Create a folder in the root directory caled **lib**, if you add the dependencies there they will be picked up automatically.
+    - Recommendation: Create a folder in the root directory called **lib**, if you add the dependencies there they will be picked up automatically.
 - Install the following NuGet packages into the **BotCommands_Dynamo** project
     - AWSSDK.DynamoDBv2
         - `Install-Package AWSSDK.DynamoDBv2 -Version 3.3.105.33`
     - NETStandard.Library
         - `Install-Package NETStandard.Library -Version 2.0.3`
     - Newtonsoft.Json
-        - `https://www.nuget.org/packages/Newtonsoft.Json`
+        - `Install-Package Newtonsoft.Json -Version 12.0.3`
  - Build BotCommands normally with your IDE
- - Build BotCommands_Dynamo with the `dotnet cli`
+ - Build BotCommands_Dynamo with `dotnet cli`
     - `dotnet publish -r win-x64 -c Release /p:PublishSingleFile=true /p:PublishTrimmed=true`
     - Self-Contained .exe file will be located: `repo_directory\bin\Release\netcoreapp3.1\win-x64\publish`
 

@@ -12,14 +12,18 @@ using RoR2;
 using RoR2.Stats;
 using UnityEngine.Networking;
 using System.Threading.Tasks;
+using R2API;
+using R2API.Utils;
 using Debug = UnityEngine.Debug;
 using Path = System.IO.Path;
+using Random = System.Random;
 
 
 namespace BotCMDs
 {
     [BepInDependency("com.bepis.r2api")]
     [BepInPlugin("com.Rayss.BotCommands", "BotCommands", "0.3.0")]
+    [R2APISubmoduleDependency(nameof(CommandHelper))]
     public partial class BotCommands : BaseUnityPlugin
     {
         // Config
@@ -35,6 +39,8 @@ namespace BotCMDs
         {
             // Register custom log source
             BepInEx.Logging.Logger.Sources.Add(Log);
+            // Register commands with console
+            R2API.Utils.CommandHelper.AddToConsoleWhenReady();
             
             // Path is the current path of the .DLL
             var path = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
@@ -131,8 +137,6 @@ namespace BotCMDs
             };
 
             // On player leave
-            // NOTE: Ensure that if a player joins and leaves multiple times during a run, their stats aren't reset. Maybe cache the stats for each player in the run locally and only upload to the DB when the run ends
-            // Alternatively, make it so stats are only logged if you complete a run (aka delete this hook)
             // LogTime and LogStagesCleared won't be needed after stats are done
             On.RoR2.Networking.GameNetworkManager.OnServerDisconnect += (orig, run, conn) =>
             {
@@ -164,6 +168,15 @@ namespace BotCMDs
                 if (!Run.instance) return;
                 LogTime();
                 LogStagesCleared();
+            };
+            
+            // TODO: Finish this hook
+            On.RoR2.Chat.CCSay += (orig, self) =>
+            {
+                string message = self[0];
+                string sender = self.sender.gameObject.ToString();
+                Log.LogWarning($"Found Message by {sender}: {message}");
+                orig(self);
             };
         }
 
@@ -251,6 +264,33 @@ namespace BotCMDs
         private static NetworkUser FindNetworkUserForConnectionServer(NetworkConnection connection)
         {
             return NetworkUser.readOnlyInstancesList.FirstOrDefault(networkUser => networkUser.connectionToClient == connection);
+        }
+        
+        // TODO: Finish command, currently generated code is sent to everyone
+        // TODO: Need to add new database to Dynamo to store temporary auth codes and add a argument to BotCommands_Dynamo to know when we are sending an auth code
+        // Link command
+        [ConCommand(commandName = "Link", flags = ConVarFlags.ExecuteOnServer,
+            helpText = "Generates a random code to link your account on Discord")]
+        private static void LinkCommand(ConCommandArgs args)
+        {
+            var random = new Random();
+            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+            var stringChars = new char[4];
+
+            for (var i = 0; i < stringChars.Length; i++)
+            {
+                stringChars[i] = chars[random.Next(chars.Length)];
+            }
+
+            var finalString = new string(stringChars);
+            Chat.AddMessage("Your link code is " + finalString);
+        }
+        
+        // TODO: Add logic here
+        // Send chat messages to database
+        private static void SendMessageToDB()
+        {
+            
         }
     }
 }
