@@ -105,7 +105,6 @@ namespace BotCommands_Dynamo
                         jsonDict["totalKills"] += statsDictionary["totalKills"];
                         jsonDict["totalDeaths"] += statsDictionary["totalDeaths"];
                         jsonDict["totalGoldCollected"] += statsDictionary["totalGoldCollected"];
-                        jsonDict["totalDistanceTraveled"] += statsDictionary["totalDistanceTraveled"];
                         jsonDict["totalItemsCollected"] += statsDictionary["totalItemsCollected"];
                         jsonDict["totalStagesCompleted"] += statsDictionary["totalStagesCompleted"];
                         jsonDict["totalPurchases"] += statsDictionary["totalPurchases"];
@@ -133,7 +132,6 @@ namespace BotCommands_Dynamo
                             {"totalKills", 0},
                             {"totalDeaths", 0},
                             {"totalGoldCollected", 0},
-                            {"totalDistanceTraveled", 0},
                             {"totalItemsCollected", 0},
                             {"totalStagesCompleted", 0},
                             {"totalPurchases", 0}
@@ -143,7 +141,6 @@ namespace BotCommands_Dynamo
                         jsonDict["totalKills"] += statsDictionary["totalKills"];
                         jsonDict["totalDeaths"] += statsDictionary["totalDeaths"];
                         jsonDict["totalGoldCollected"] += statsDictionary["totalGoldCollected"];
-                        jsonDict["totalDistanceTraveled"] += statsDictionary["totalDistanceTraveled"];
                         jsonDict["totalItemsCollected"] += statsDictionary["totalItemsCollected"];
                         jsonDict["totalStagesCompleted"] += statsDictionary["totalStagesCompleted"];
                         jsonDict["totalPurchases"] += statsDictionary["totalPurchases"];

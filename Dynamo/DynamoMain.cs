@@ -21,7 +21,7 @@ namespace BotCommands_Dynamo
         //Used to tell if we errored and need to exit
         private static bool _progress;
 
-        //Argument organization: serverName, ID, timeAlive, kills, deaths, goldCollected, distanceTraveled, itemsCollected, stagesCompleted, purchases
+        //Argument organization: serverName, ID, timeAlive, kills, deaths, goldCollected, itemsCollected, stagesCompleted, purchases
         public static void Main(string[] args)
         {
             if (args == null)
@@ -33,10 +33,9 @@ namespace BotCommands_Dynamo
             var kills = Convert.ToInt32(Math.Round(Convert.ToDouble(args[3])));
             var deaths = Convert.ToInt32(Math.Round(Convert.ToDouble(args[4])));
             var goldCollected = Convert.ToInt32(Math.Round(Convert.ToDouble(args[5])));
-            var distanceTraveled = Convert.ToInt32(Math.Round(Convert.ToDouble(args[6])));
-            var itemsCollected = Convert.ToInt32(Math.Round(Convert.ToDouble(args[7])));
-            var stagesCompleted = Convert.ToInt32(Math.Round(Convert.ToDouble(args[8])));
-            var purchases = Convert.ToInt32(Math.Round(Convert.ToDouble(args[9])));
+            var itemsCollected = Convert.ToInt32(Math.Round(Convert.ToDouble(args[6])));
+            var stagesCompleted = Convert.ToInt32(Math.Round(Convert.ToDouble(args[7])));
+            var purchases = Convert.ToInt32(Math.Round(Convert.ToDouble(args[8])));
 
             //Variables used for DynamoDB table
             const string dbTableName = "BotCommands_Stats";
@@ -65,7 +64,6 @@ namespace BotCommands_Dynamo
                 {"totalKills", kills},
                 {"totalDeaths", deaths},
                 {"totalGoldCollected", goldCollected},
-                {"totalDistanceTraveled", distanceTraveled},
                 {"totalItemsCollected", itemsCollected},
                 {"totalStagesCompleted", stagesCompleted},
                 {"totalPurchases", purchases}

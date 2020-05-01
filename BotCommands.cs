@@ -213,7 +213,6 @@ namespace BotCMDs
                 "totalKills",
                 "totalDeaths",
                 "totalGoldCollected",
-                "totalDistanceTraveled",
                 "totalItemsCollected",
                 "totalStagesCompleted",
                 "totalPurchases"
@@ -231,8 +230,14 @@ namespace BotCMDs
             {
                 sendToDynamo[kvp.Key] = kvp.Value;
             }
+            #if DEBUG
+            foreach (KeyValuePair<string, string> kvp in sendToDynamo)
+            {
+                Log.LogWarning(kvp.Key + " : " + kvp.Value);
+            }
+            #endif
             // Debug.Log(string.Join("\n", array)); <<<<< Used for seeing all the stat options
-            // Argument organization: serverName, ID, timeAlive, kills, deaths, goldCollected, distanceTraveled, itemsCollected, stagesCompleted, purchases
+            // Argument organization: serverName, ID, timeAlive, kills, deaths, goldCollected, itemsCollected, stagesCompleted, purchases
             // Use ProcessStartInfo class
             var path = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
             ProcessStartInfo startInfo = new ProcessStartInfo();
@@ -240,11 +245,10 @@ namespace BotCMDs
             startInfo.UseShellExecute = false;
             startInfo.FileName = path + @"\BotCommands_Dynamo.exe";
             startInfo.WindowStyle = ProcessWindowStyle.Hidden;
-            startInfo.Arguments = string.Format("{0} {1} {2} {3} {4} {5} {6} {7} {8} {9}", _serverName, steamId,
+            startInfo.Arguments = string.Format("{0} {1} {2} {3} {4} {5} {6} {7} {8}", _serverName, steamId,
                 sendToDynamo["totalTimeAlive"], sendToDynamo["totalKills"], sendToDynamo["totalDeaths"],
-                sendToDynamo["totalGoldCollected"], sendToDynamo["totalDistanceTraveled"],
-                sendToDynamo["totalItemsCollected"], sendToDynamo["totalStagesCompleted"],
-                sendToDynamo["totalPurchases"]);
+                sendToDynamo["totalGoldCollected"], sendToDynamo["totalPurchases"],
+                sendToDynamo["totalItemsCollected"], sendToDynamo["totalStagesCompleted"]);
 
             try
             {
