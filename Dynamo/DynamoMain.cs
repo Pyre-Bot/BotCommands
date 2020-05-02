@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DocumentModel;
@@ -26,16 +27,13 @@ namespace BotCommands_Dynamo
         {
             if (args == null)
                 return;
-            var serverName = args[0];
+            var serverName = "infTest";
+            long ID = 123456789;
             //Variables used for dictionary
-            var ID = long.Parse(args[1]);
-            var timeAlive = Convert.ToInt32(Math.Round(Convert.ToDouble(args[2])));
-            var kills = Convert.ToInt32(Math.Round(Convert.ToDouble(args[3])));
-            var deaths = Convert.ToInt32(Math.Round(Convert.ToDouble(args[4])));
-            var goldCollected = Convert.ToInt32(Math.Round(Convert.ToDouble(args[5])));
-            var itemsCollected = Convert.ToInt32(Math.Round(Convert.ToDouble(args[6])));
-            var stagesCompleted = Convert.ToInt32(Math.Round(Convert.ToDouble(args[7])));
-            var purchases = Convert.ToInt32(Math.Round(Convert.ToDouble(args[8])));
+            var arguments = string.Join(" ", args);
+            var statsDictionary = arguments.Split(' ')
+                .Select(p => p.Trim().Split(','))
+                .ToDictionary(p => p[0], p => p[1]);
 
             //Variables used for DynamoDB table
             const string dbTableName = "BotCommands_Stats";
@@ -58,16 +56,7 @@ namespace BotCommands_Dynamo
             var tableProvisionedThroughput = new ProvisionedThroughput(5, 5);
 
             //Dictionary containing the stats
-            var statsDictionary = new Dictionary<string, int>
-            {
-                {"totalTimeAlive", timeAlive},
-                {"totalKills", kills},
-                {"totalDeaths", deaths},
-                {"totalGoldCollected", goldCollected},
-                {"totalItemsCollected", itemsCollected},
-                {"totalStagesCompleted", stagesCompleted},
-                {"totalPurchases", purchases}
-            };
+
             //Turns dictionary into JSON
             var statsJson = JsonConvert.SerializeObject(statsDictionary);
 
@@ -94,19 +83,11 @@ namespace BotCommands_Dynamo
             newItemDocument["SteamID64"] = ID;
             newItemDocument[serverName] = Document.FromJson(statsJson);
             AddNewStats(newItemDocument).Wait();
-            //Display the stats record
-#if DEBUG
-            ReadStatsTable(ID).Wait();
-#endif
 
             //Rest of the program updates stats, don't update if not needed
             if (!_progress)
                 return;
             UpdateStats(ID, serverName, statsDictionary).Wait();
-            //Display the stats record
-#if DEBUG
-            ReadStatsTable(ID).Wait();
-#endif
         }
     }
 }

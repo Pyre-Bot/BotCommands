@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
@@ -72,8 +73,8 @@ namespace BotCMDs
             Reading();
             
             // These are only called if built in debug mode
-            OpenExe();
-            RandomString();
+            /*OpenExe();
+            RandomString();*/
         }
 
         private async void Reading()
@@ -128,11 +129,11 @@ namespace BotCMDs
 
                 foreach (var user in NetworkUser.readOnlyInstancesList)
                 {
-                    GetStats(user);
+                    new Thread(delegate()
+                    {
+                        GetStats(user);
+                    }).Start();
                 }
-
-                LogTime();
-                LogStagesCleared();
                 return valid; // Required if the hooked command has a return value
             };
 
@@ -143,33 +144,14 @@ namespace BotCMDs
                 if (Run.instance)
                 {
                     NetworkUser user = FindNetworkUserForConnectionServer(conn);
-                    GetStats(user);
-
-                    LogTime();
-                    LogStagesCleared();
+                    new Thread(delegate()
+                    {
+                        GetStats(user);
+                    }).Start();
                 }
                 orig(run, conn);
             };
 
-            // On scene change (unloaded, new scene not yet loaded)
-            On.RoR2.FadeToBlackManager.OnSceneUnloaded += (orig, run) =>
-            {
-                orig(run);
-                if (!Run.instance) return;
-                LogTime();
-                LogStagesCleared();
-            };
-
-            // On player join
-            // Will be removed on new stat tracking
-            On.RoR2.Networking.GameNetworkManager.OnServerConnect += (orig, run, conn) =>
-            {
-                orig(run, conn);
-                if (!Run.instance) return;
-                LogTime();
-                LogStagesCleared();
-            };
-            
             // TODO: Finish this hook
             On.RoR2.Chat.CCSay += (orig, self) =>
             {
@@ -180,64 +162,32 @@ namespace BotCMDs
             };
         }
 
-        // Will be removed on new stat tracking
-        private static void LogTime()
-        {
-            if (!Run.instance)
-            {
-                throw new ConCommandException("No run is currently in progress.");
-            }
-            Debug.Log("Run time is " + Run.instance.GetRunStopwatch().ToString());
-        }
-
-        // Will be removed on new stat tracking
-        private static void LogStagesCleared()
-        {
-            if (!Run.instance)
-            {
-                throw new ConCommandException("No run is currently in progress.");
-            }
-            Debug.Log("Stages cleared: " + Run.instance.NetworkstageClearCount.ToString());
-        }
-
         private static void GetStats(NetworkUser user)
         {
+            // Measures function execution time
+            var sw = new Stopwatch();
+            sw.Start();
+            // Unity variables
             GameObject playerMasterObject = user.masterObject;
             long steamId = System.Convert.ToInt64(user.id.steamId.ToString());
             StatSheet statSheet;
             PlayerStatsComponent component = playerMasterObject.GetComponent<PlayerStatsComponent>();
             statSheet = (component?.currentStats);
-            List<string> listOfStatNames = new List<string>
-            {
-                "totalTimeAlive",
-                "totalKills",
-                "totalDeaths",
-                "totalGoldCollected",
-                "totalItemsCollected",
-                "totalStagesCompleted",
-                "totalPurchases"
-            };
-            Dictionary<string, string> outputStats = new Dictionary<string, string>();
             Dictionary<string, string> sendToDynamo = new Dictionary<string, string>();
-            // Don't need all the stats they access though, should only use some of the fields (may be able to split up by category)
+            // Creates the array of the run report
             string[] array = new string[statSheet.fields.Length];
+            // Iterates through the run report to add to a dictionary
             for (int i = 0; i < array.Length; i++)
             {
                 array[i] = string.Format("[\"{0}\"]={1}", statSheet.fields[i].name, statSheet.fields[i].ToString());
-                outputStats[statSheet.fields[i].name] = statSheet.fields[i].ToString();
+                if (statSheet.fields[i].ToString() == "0") { }
+                else
+                {
+                    sendToDynamo[statSheet.fields[i].name] = statSheet.fields[i].ToString();
+                }
             }
-            foreach (var kvp in outputStats.Where(kvp => listOfStatNames.Contains(kvp.Key)))
-            {
-                sendToDynamo[kvp.Key] = kvp.Value;
-            }
-            #if DEBUG
-            foreach (KeyValuePair<string, string> kvp in sendToDynamo)
-            {
-                Log.LogWarning(kvp.Key + " : " + kvp.Value);
-            }
-            #endif
-            // Debug.Log(string.Join("\n", array)); <<<<< Used for seeing all the stat options
-            // Argument organization: serverName, ID, timeAlive, kills, deaths, goldCollected, itemsCollected, stagesCompleted, purchases
+            // Splits the dictionary into a string that can be used as an argument
+            var result = string.Join(" ", sendToDynamo.Select(kvp => $"{kvp.Key},{kvp.Value}"));
             // Use ProcessStartInfo class
             var path = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
             ProcessStartInfo startInfo = new ProcessStartInfo();
@@ -245,11 +195,7 @@ namespace BotCMDs
             startInfo.UseShellExecute = false;
             startInfo.FileName = path + @"\BotCommands_Dynamo.exe";
             startInfo.WindowStyle = ProcessWindowStyle.Hidden;
-            startInfo.Arguments = string.Format("{0} {1} {2} {3} {4} {5} {6} {7} {8}", _serverName, steamId,
-                sendToDynamo["totalTimeAlive"], sendToDynamo["totalKills"], sendToDynamo["totalDeaths"],
-                sendToDynamo["totalGoldCollected"], sendToDynamo["totalPurchases"],
-                sendToDynamo["totalItemsCollected"], sendToDynamo["totalStagesCompleted"]);
-
+            startInfo.Arguments = result;
             try
             {
                 // Start the process with the info we specified.
@@ -258,10 +204,12 @@ namespace BotCMDs
                     Log.LogInfo("BotCommands: Updating stats database!");
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                Log.LogError("BotCommands: Unable to find executable file!");
+                Log.LogError($"BotCommands: {ex.Message}");
             }
+            sw.Stop();
+            Log.LogError(sw.Elapsed);
         }
         
         // Borrowed from R2DSEssentials.Util.Networking
