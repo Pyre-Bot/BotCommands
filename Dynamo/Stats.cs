@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Amazon.DynamoDBv2.DocumentModel;
 using Newtonsoft.Json;
@@ -59,10 +58,7 @@ namespace BotCommands_Dynamo
             {
                 var readStats = statsTable.GetItemAsync(hash, token);
                 stats_record = await readStats;
-                if (stats_record == null)
-                {
-                    return false;
-                }
+                if (stats_record == null) return false;
 
                 Console.WriteLine(" -- Found record:\n" + stats_record.ToJsonPretty());
                 return true;
@@ -76,7 +72,6 @@ namespace BotCommands_Dynamo
         }
 
         //Only ran if the information is already in table, updates to new values
-        //This fucking sucked
         private static async Task UpdateStats(long ID, string serverName, Dictionary<string, string> statsDictionary)
         {
             try
@@ -95,22 +90,22 @@ namespace BotCommands_Dynamo
                         dictionaryString.Split(default(string[]), StringSplitOptions.RemoveEmptyEntries));
                     dictionaryString = dictionaryString.Substring(dictionaryString.LastIndexOf("{"));
                     dictionaryString = dictionaryString.Substring(0, dictionaryString.LastIndexOf("}") + 1);
+                    Console.WriteLine(dictionaryString);
                     //Once again turns the string into ANOTHER dictionary
                     var jsonDict =
-                        JsonConvert.DeserializeObject<Dictionary<string, int>>(dictionaryString);
-                    foreach (KeyValuePair<string, int> kvp in jsonDict)
-                    {
+                        JsonConvert.DeserializeObject<Dictionary<string, string>>(dictionaryString);
+                    foreach (var kvp in jsonDict)
                         if (statsDictionary.ContainsKey(kvp.Key))
                         {
                             var number1 = double.Parse(statsDictionary[kvp.Key]);
-                            var number2 = double.Parse(kvp.Value.ToString());
+                            var number2 = double.Parse(kvp.Value);
                             statsDictionary[kvp.Key] = (number1 + number2).ToString();
                         }
                         else
                         {
-                            statsDictionary[kvp.Key] = kvp.Value.ToString();
+                            statsDictionary[kvp.Key] = kvp.Value;
                         }
-                    }
+
                     var statsJson2 = JsonConvert.SerializeObject(statsDictionary);
                     var updateDocument = new Document();
                     updateDocument["SteamID64"] = ID;
@@ -134,77 +129,6 @@ namespace BotCommands_Dynamo
                         Console.WriteLine(exception.Message);
                     }
                 }
-                
-                //Takes the dictionary and turns it into a string again so we can edit values easier
-                // try
-                // {
-                //     try
-                //     {
-                //         dictionaryString = string.Join("",
-                //             dictionaryString.Split(default(string[]), StringSplitOptions.RemoveEmptyEntries));
-                //         dictionaryString = dictionaryString.Substring(dictionaryString.LastIndexOf("{"));
-                //         dictionaryString = dictionaryString.Substring(0, dictionaryString.LastIndexOf("}") + 1);
-                //         //Once again turns the string into ANOTHER dictionary
-                //         var jsonDict =
-                //             JsonConvert.DeserializeObject<Dictionary<string, int>>(dictionaryString);
-                //         //Updates the values to include the information from current run
-                //         jsonDict["totalTimeAlive"] += statsDictionary["totalTimeAlive"];
-                //         jsonDict["totalKills"] += statsDictionary["totalKills"];
-                //         jsonDict["totalDeaths"] += statsDictionary["totalDeaths"];
-                //         jsonDict["totalGoldCollected"] += statsDictionary["totalGoldCollected"];
-                //         jsonDict["totalItemsCollected"] += statsDictionary["totalItemsCollected"];
-                //         jsonDict["totalStagesCompleted"] += statsDictionary["totalStagesCompleted"];
-                //         jsonDict["totalPurchases"] += statsDictionary["totalPurchases"];
-                //         //Turns the dictionary into a string ONE MORE TIME.....
-                //         var statsJson2 = JsonConvert.SerializeObject(jsonDict);
-                //         //Creates a new document so we can update the value
-                //         var updateDocument = new Document();
-                //         updateDocument["SteamID64"] = ID;
-                //         updateDocument[serverName] = Document.FromJson(statsJson2);
-                //         var writeNew = statsTable.UpdateItemAsync(updateDocument, token);
-                //         await writeNew;
-                //     }
-                //     catch (Exception ex)
-                //     {
-                //         Console.WriteLine(ex.Message);
-                //     }
-                // }
-                // catch
-                // {
-                //     try
-                //     {
-                //         var jsonDict = new Dictionary<string, int>
-                //         {
-                //             {"totalTimeAlive", 0},
-                //             {"totalKills", 0},
-                //             {"totalDeaths", 0},
-                //             {"totalGoldCollected", 0},
-                //             {"totalItemsCollected", 0},
-                //             {"totalStagesCompleted", 0},
-                //             {"totalPurchases", 0}
-                //         };
-                //         //Updates the values to include the information from current run
-                //         jsonDict["totalTimeAlive"] += statsDictionary["totalTimeAlive"];
-                //         jsonDict["totalKills"] += statsDictionary["totalKills"];
-                //         jsonDict["totalDeaths"] += statsDictionary["totalDeaths"];
-                //         jsonDict["totalGoldCollected"] += statsDictionary["totalGoldCollected"];
-                //         jsonDict["totalItemsCollected"] += statsDictionary["totalItemsCollected"];
-                //         jsonDict["totalStagesCompleted"] += statsDictionary["totalStagesCompleted"];
-                //         jsonDict["totalPurchases"] += statsDictionary["totalPurchases"];
-                //         //Turns the dictionary into a string ONE MORE TIME.....
-                //         var statsJson2 = JsonConvert.SerializeObject(jsonDict);
-                //         //Creates a new document so we can update the value
-                //         var updateDocument = new Document();
-                //         updateDocument["SteamID64"] = ID;
-                //         updateDocument[serverName] = Document.FromJson(statsJson2);
-                //         var writeNew = statsTable.UpdateItemAsync(updateDocument, token);
-                //         await writeNew;
-                //     }
-                //     catch (Exception ex)
-                //     {
-                //         Console.WriteLine(ex.Message);
-                //     }
-                // }
             }
             catch (Exception ex)
             {

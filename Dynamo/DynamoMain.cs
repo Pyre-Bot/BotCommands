@@ -21,20 +21,32 @@ namespace BotCommands_Dynamo
 
         //Used to tell if we errored and need to exit
         private static bool _progress;
-
-        //Argument organization: serverName, ID, timeAlive, kills, deaths, goldCollected, itemsCollected, stagesCompleted, purchases
+        
         public static void Main(string[] args)
         {
             if (args == null)
                 return;
-            var serverName = "infTest";
+            var serverName = "";
             long ID = 123456789;
             //Variables used for dictionary
             var arguments = string.Join(" ", args);
             var statsDictionary = arguments.Split(' ')
                 .Select(p => p.Trim().Split(','))
                 .ToDictionary(p => p[0], p => p[1]);
+            foreach (var kvp in statsDictionary)
+            {
+                if (kvp.Key == "Server")
+                {
+                    serverName = kvp.Value;
+                    statsDictionary.Remove(kvp.Key);
+                }
 
+                if (kvp.Key == "SteamID")
+                {
+                    ID = Int64.Parse(kvp.Value);
+                    statsDictionary.Remove(kvp.Key);
+                }
+            }
             //Variables used for DynamoDB table
             const string dbTableName = "BotCommands_Stats";
             var itemAttributes = new List<AttributeDefinition>
@@ -54,8 +66,6 @@ namespace BotCommands_Dynamo
                 }
             };
             var tableProvisionedThroughput = new ProvisionedThroughput(5, 5);
-
-            //Dictionary containing the stats
 
             //Turns dictionary into JSON
             var statsJson = JsonConvert.SerializeObject(statsDictionary);

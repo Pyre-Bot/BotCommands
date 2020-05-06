@@ -71,10 +71,6 @@ namespace BotCMDs
         {
             StartHooks();
             Reading();
-            
-            // These are only called if built in debug mode
-            /*OpenExe();
-            RandomString();*/
         }
 
         private async void Reading()
@@ -136,7 +132,7 @@ namespace BotCMDs
                 }
                 return valid; // Required if the hooked command has a return value
             };
-
+            
             // On player leave
             // LogTime and LogStagesCleared won't be needed after stats are done
             On.RoR2.Networking.GameNetworkManager.OnServerDisconnect += (orig, run, conn) =>
@@ -144,15 +140,13 @@ namespace BotCMDs
                 if (Run.instance)
                 {
                     NetworkUser user = FindNetworkUserForConnectionServer(conn);
-                    new Thread(delegate()
-                    {
-                        GetStats(user);
-                    }).Start();
+                    new Thread(delegate() { GetStats(user); }).Start();
                 }
-                orig(run, conn);
-            };
 
-            // TODO: Finish this hook
+                orig(run, conn);
+            };    
+
+                // TODO: Finish this hook
             On.RoR2.Chat.CCSay += (orig, self) =>
             {
                 string message = self[0];
@@ -164,9 +158,6 @@ namespace BotCMDs
 
         private static void GetStats(NetworkUser user)
         {
-            // Measures function execution time
-            var sw = new Stopwatch();
-            sw.Start();
             // Unity variables
             GameObject playerMasterObject = user.masterObject;
             long steamId = System.Convert.ToInt64(user.id.steamId.ToString());
@@ -186,6 +177,9 @@ namespace BotCMDs
                     sendToDynamo[statSheet.fields[i].name] = statSheet.fields[i].ToString();
                 }
             }
+            // Adds server and SteamID to dictionary
+            sendToDynamo["Server"] = _serverName;
+            sendToDynamo["SteamID"] = steamId.ToString();
             // Splits the dictionary into a string that can be used as an argument
             var result = string.Join(" ", sendToDynamo.Select(kvp => $"{kvp.Key},{kvp.Value}"));
             // Use ProcessStartInfo class
@@ -208,8 +202,6 @@ namespace BotCMDs
             {
                 Log.LogError($"BotCommands: {ex.Message}");
             }
-            sw.Stop();
-            Log.LogError(sw.Elapsed);
         }
         
         // Borrowed from R2DSEssentials.Util.Networking
