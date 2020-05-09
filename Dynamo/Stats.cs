@@ -97,9 +97,19 @@ namespace BotCommands_Dynamo
                     foreach (var kvp in jsonDict)
                         if (statsDictionary.ContainsKey(kvp.Key))
                         {
-                            var number1 = double.Parse(statsDictionary[kvp.Key]);
-                            var number2 = double.Parse(kvp.Value);
-                            statsDictionary[kvp.Key] = (number1 + number2).ToString();
+                            if (!kvp.Key.Contains("highest") && !kvp.Key.Contains("max") &&
+                                !kvp.Key.Contains("longest"))
+                            {
+                                var number1 = double.Parse(statsDictionary[kvp.Key]);
+                                var number2 = double.Parse(kvp.Value);
+                                statsDictionary[kvp.Key] = (number1 + number2).ToString();
+                            }
+                            else if (kvp.Key.Contains("highest") || kvp.Key.Contains("max") ||
+                                     kvp.Key.Contains("longest"))
+                            {
+                                if (double.Parse(kvp.Value) > double.Parse(statsDictionary[kvp.Key]))
+                                    statsDictionary[kvp.Key] = kvp.Value;
+                            }
                         }
                         else
                         {
