@@ -21,7 +21,7 @@ namespace BotCommands_Dynamo
 
         //Used to tell if we errored and need to exit
         private static bool _progress;
-        
+
         public static void Main(string[] args)
         {
             if (args == null)
@@ -43,10 +43,11 @@ namespace BotCommands_Dynamo
 
                 if (kvp.Key == "SteamID")
                 {
-                    ID = Int64.Parse(kvp.Value);
+                    ID = long.Parse(kvp.Value);
                     statsDictionary.Remove(kvp.Key);
                 }
             }
+
             //Variables used for DynamoDB table
             const string dbTableName = "BotCommands_Stats";
             var itemAttributes = new List<AttributeDefinition>
