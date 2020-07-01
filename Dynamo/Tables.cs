@@ -35,11 +35,11 @@ namespace BotCommands_Dynamo
             }
             catch
             {
-                statsTableDescription = null;
+                description = null;
                 return false;
             }
 
-            statsTableDescription = describeTable.Table;
+            description = describeTable.Table;
             return true;
         }
 
@@ -70,7 +70,7 @@ namespace BotCommands_Dynamo
             }
 
             Console.WriteLine(" -- Status of new table: {0}", response.TableDescription.TableStatus);
-            statsTableDescription = response.TableDescription;
+            description = response.TableDescription;
             return true;
         }
     }

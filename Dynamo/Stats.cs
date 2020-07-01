@@ -10,13 +10,13 @@ namespace BotCommands_Dynamo
     public static partial class Dynamo
     {
         //Adds new stats if they don't exist
-        private static async Task AddNewStats(Document newItem)
+        private static async Task AddNewItem(Document newItem)
         {
             string ID = newItem["SteamID64"];
-            if (!await ReadStats(ID)) //Only runs if ReadStats returns false (no info in table)
+            if (!await ReadItem(ID)) //Only runs if ReadItem returns false
                 try
                 {
-                    var writeNew = statsTable.PutItemAsync(newItem, token);
+                    var writeNew = itemTable.PutItemAsync(newItem, token);
                     await writeNew;
                     _progress = false;
                 }
@@ -25,19 +25,19 @@ namespace BotCommands_Dynamo
                     Console.WriteLine(" -- Failed to write new data: " + ex.Message);
                 }
             else
-                Console.WriteLine(" -- Stats already exists --");
+                Console.WriteLine(" -- Table already exists --");
         }
 
         //Attempts to read the stats, used to know if we need to add new ones
-        private static async Task<bool> ReadStats(string ID)
+        private static async Task<bool> ReadItem(string ID)
         {
             var hash = new Primitive(ID, true);
             try
             {
-                var readStats = statsTable.GetItemAsync(hash, token);
-                stats_record = await readStats;
+                var readItem = itemTable.GetItemAsync(hash, token);
+                item_record = await readItem;
 
-                if (stats_record == null)
+                if (item_record == null)
                     return false;
                 return true;
             }
@@ -56,11 +56,11 @@ namespace BotCommands_Dynamo
 
             try
             {
-                var readStats = statsTable.GetItemAsync(hash, token);
-                stats_record = await readStats;
-                if (stats_record == null) return false;
+                var readStats = itemTable.GetItemAsync(hash, token);
+                item_record = await readStats;
+                if (item_record == null) return false;
 
-                Console.WriteLine(" -- Found record:\n" + stats_record.ToJsonPretty());
+                Console.WriteLine(" -- Found record:\n" + item_record.ToJsonPretty());
                 return true;
             }
             catch (Exception ex)
@@ -79,7 +79,7 @@ namespace BotCommands_Dynamo
                 try
                 {
                     //Gets the results and turns them into JSON
-                    var json = stats_record.ToJsonPretty();
+                    var json = item_record.ToJsonPretty();
                     //Turns the JSON into a dictionary
                     var dict = JsonConvert.DeserializeObject<Dictionary<string, object>>(json);
                     //Removes what we don't want
@@ -120,7 +120,7 @@ namespace BotCommands_Dynamo
                     var updateDocument = new Document();
                     updateDocument["SteamID64"] = ID;
                     updateDocument[serverName] = Document.FromJson(statsJson2);
-                    var writeNew = statsTable.UpdateItemAsync(updateDocument, token);
+                    var writeNew = itemTable.UpdateItemAsync(updateDocument, token);
                     await writeNew;
                 }
                 catch (Exception ex)
@@ -131,7 +131,7 @@ namespace BotCommands_Dynamo
                         var updateDocument = new Document();
                         updateDocument["SteamID64"] = ID;
                         updateDocument[serverName] = Document.FromJson(statsJson2);
-                        var writeNew = statsTable.UpdateItemAsync(updateDocument, token);
+                        var writeNew = itemTable.UpdateItemAsync(updateDocument, token);
                         await writeNew;
                     }
                     catch (Exception exception)

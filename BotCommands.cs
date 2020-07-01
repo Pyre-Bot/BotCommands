@@ -141,15 +141,6 @@ namespace BotCMDs
 
                 orig(run, conn);
             };
-
-            // TODO: Finish this hook
-            Chat.CCSay += (orig, self) =>
-            {
-                var message = self[0];
-                var sender = self.sender.gameObject.ToString();
-                Log.LogWarning($"Found Message by {sender}: {message}");
-                orig(self);
-            };
         }
 
         private static void GetStats(NetworkUser user)
@@ -226,12 +217,6 @@ namespace BotCMDs
 
             var finalString = new string(stringChars);
             RoR2.Chat.AddMessage("Your link code is " + finalString);
-        }
-
-        // TODO: Add logic here
-        // Send chat messages to database
-        private static void SendMessageToDB()
-        {
         }
     }
 }
