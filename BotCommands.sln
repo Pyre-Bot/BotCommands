@@ -5,7 +5,7 @@ VisualStudioVersion = 16.0.29613.14
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BotCommands", "BotCommands.csproj", "{9F3855A7-02AB-4E44-A337-F4594A1D2148}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BotCommands_Dynamo", "Dynamo\BotCommands_Dynamo.csproj", "{5D6B7655-F5A9-4CAA-B697-83AFBF54B10D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BotCommands_Dynamo", "Dynamo\BotCommands_Dynamo.csproj", "{5D6B7655-F5A9-4CAA-B697-83AFBF54B10D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
