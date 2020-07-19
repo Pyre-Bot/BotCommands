@@ -112,7 +112,9 @@ namespace BotCMDs
         // TODO: Add the option for multiple filter values, so we can use admin and commands channels
         private async void SeqLogRead(string server, string apiKey, string filter)
         {
+#if DEBUG
             Log.LogWarning(filter);
+#endif
             var connection = new SeqConnection(server, apiKey);
 
             string strict = null;
@@ -126,22 +128,13 @@ namespace BotCMDs
 
             stream.Select(jObject => LogEventReader.ReadFromJObject(jObject))
                 .Subscribe(evt => {
-                    //Log.LogWarning(evt.RenderMessage());
                     string command = evt.RenderMessage();
                     command = command.Trim(new char[] {'"'});
-                    //Log.LogWarning(command);
                     Consolequeue.Enqueue(command);
                 });
 
             await stream;
         }
-
-        //Log.LogWarning(evt)
-        //RoR2.Console.instance.SubmitCmd(null, "say ahh")
-        //string[] cmdargs = {"ahh"};
-        //RoR2.Console.instance.RunClientCmd(null, "say", cmdargs);
-        //Consolequeue.Enqueue("say ahh");
-
         private static void StartHooks()
         {
             // On run end
@@ -227,12 +220,12 @@ namespace BotCMDs
             {
                 sendToDynamo[kvp.Key] = kvp.Value;
             }
-            #if DEBUG
+#if DEBUG
             foreach (KeyValuePair<string, string> kvp in sendToDynamo)
             {
                 Log.LogWarning(kvp.Key + " : " + kvp.Value);
             }
-            #endif
+#endif
             // Debug.Log(string.Join("\n", array)); <<<<< Used for seeing all the stat options
             // Argument organization: serverName, ID, timeAlive, kills, deaths, goldCollected, itemsCollected, stagesCompleted, purchases
             // Use ProcessStartInfo class
