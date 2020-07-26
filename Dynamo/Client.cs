@@ -7,7 +7,7 @@ namespace BotCommands_Dynamo
     public static partial class Dynamo
     {
         //Creates the connection to the database
-        private static bool createClient(bool useDynamoDbLocal)
+        private static bool CreateClient(bool useDynamoDbLocal)
         {
             if (useDynamoDbLocal)
             {

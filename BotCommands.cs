@@ -1,67 +1,91 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
-using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Threading;
-using System.Threading.Tasks;
 using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
-using On.RoR2.Networking;
-using R2API.Utils;
+using UnityEngine;
 using RoR2;
 using RoR2.Stats;
 using UnityEngine.Networking;
-using Chat = On.RoR2.Chat;
-using Console = RoR2.Console;
+using R2API.Utils;
+using Debug = UnityEngine.Debug;
 using Path = System.IO.Path;
-using RunReport = On.RoR2.RunReport;
+
+using Seq.Api;
+using Newtonsoft.Json.Linq;
+
+using Serilog.Formatting.Compact.Reader;
+using System.Reactive.Linq;
 
 namespace BotCMDs
 {
     [BepInDependency("com.bepis.r2api")]
     [BepInPlugin("com.Rayss.BotCommands", "BotCommands", "0.3.0")]
     [R2APISubmoduleDependency(nameof(CommandHelper))]
-    public class BotCommands : BaseUnityPlugin
+    public partial class BotCommands : BaseUnityPlugin
     {
+        // Config
+        private static ConfigEntry<string> Servername { get; set; }
         private static string _serverName;
 
+        private static ConfigEntry<string> Seqserver { get; set; }
+        private static string _seqserver;
+
+        private static ConfigEntry<string> Seqapi { get; set; }
+        private static string _seqapi;
+
+        private static ConfigEntry<string> Seqfilter { get; set; }
+        private static string _seqfilter;
+
         // Create custom log source
-        private static readonly ManualLogSource Log = new ManualLogSource("BotCommands");
+        private static ManualLogSource Log = new ManualLogSource("BotCommands");
 
-        private string _botcmdPath;
+        Queue<string> Consolequeue = new Queue<string>();
 
-        // Config
-        private static ConfigEntry<string> Cmdpath { get; set; }
-        private static ConfigEntry<string> Servername { get; set; }
-
-        [SuppressMessage("Code Quality", "IDE0051:Remove unused private members")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Code Quality", "IDE0051:Remove unused private members")]
         private void Awake()
         {
             // Register custom log source
             BepInEx.Logging.Logger.Sources.Add(Log);
             // Register commands with console
             R2API.Utils.CommandHelper.AddToConsoleWhenReady();
-
             // Path is the current path of the .DLL
-            var path = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-            Cmdpath = Config.Bind(
-                "Config",
-                "botcmd",
-                path + @"\botcmd.txt",
-                "Insert the path of your botcmd.txt"
-            );
-            _botcmdPath = Cmdpath.Value;
-            Servername = Config.Bind(
+            var path = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);  // Unused?
+
+            Servername = Config.Bind<string>(
                 "Config",
                 "Server Name",
-                "Server1",
+                "ServerTest",
                 "Enter the name of your server for stats tracking"
             );
             _serverName = Servername.Value;
+
+            Seqserver = Config.Bind<string>(
+                "Config",
+                "Seq Server Address",
+                "http://example.com",
+                "Enter the value of your Seq.net server address"
+            );
+            _seqserver = Seqserver.Value;
+
+            Seqapi = Config.Bind<string>(
+                "Config",
+                "Seq API Key",
+                "",
+                "Enter the value of your Seq.net API Key"
+            );
+            _seqapi = Seqapi.Value;
+
+            Seqfilter = Config.Bind<string>(
+                "Config",
+                "Seq Filter",
+                "Contains(Channel,'670373469845979136') or Contains(Channel, '665998238171660320')", // Default uses two channels, which can be used as Admin + Regular command channels
+                "Enter the value of your Seq filter"
+            );
+            _seqfilter = Seqfilter.Value;
 
             Log.LogInfo("Created by Rayss and InfernalPlacebo.");
 #if DEBUG
@@ -69,78 +93,101 @@ namespace BotCMDs
 #endif
         }
 
-        [SuppressMessage("Code Quality", "IDE0051:Remove unused private members")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Code Quality", "IDE0051:Remove unused private members")]
         private void Start()
         {
             StartHooks();
-            Reading();
+            SeqLogRead(_seqserver, _seqapi, _seqfilter); // Having the filter to a plain value seems to give me a WebSocketException
         }
 
-        private async void Reading()
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Code Quality", "IDE0051:Remove unused private members")]
+        private void Update()
         {
-            // Create botcmd.txt if it doesn't exist yet
-            using (var w = File.AppendText(_botcmdPath))
+            if (Consolequeue.Count > 0)
             {
-                w.Close();
-            }
-
-            using (var reader = new StreamReader(new FileStream(_botcmdPath,
-                FileMode.Open, FileAccess.Read, FileShare.ReadWrite)))
-            {
-                //start at the end of the file
-                var lastMaxOffset = reader.BaseStream.Length;
-
-                while (true)
-                {
-                    await Task.Delay(1000);
-
-                    //seek to the last max offset
-                    reader.BaseStream.Seek(lastMaxOffset, SeekOrigin.Begin);
-
-                    //read out of the file until the EOF
-                    string line;
-                    while ((line = reader.ReadLine()) != null)
-                        // Exception handling, I guess
-                        try
-                        {
-                            Console.instance.SubmitCmd(null, line);
-                        }
-                        catch
-                        {
-                            Log.LogWarning("No sir, partner.");
-                        }
-
-                    //update the last max offset
-                    lastMaxOffset = reader.BaseStream.Position;
-                }
+                RoR2.Console.instance.SubmitCmd(null, Consolequeue.Dequeue());
             }
         }
 
+        // TODO: Add the option for multiple filter values, so we can use admin and commands channels
+        private async void SeqLogRead(string server, string apiKey, string filter)
+        {
+#if DEBUG
+            Log.LogWarning(filter);
+#endif
+            var connection = new SeqConnection(server, apiKey);
+
+            string strict = null;
+            if (filter != null)
+            {
+                var converted = await connection.Expressions.ToStrictAsync(filter);
+                strict = converted.StrictExpression;
+            }
+
+            var stream = await connection.Events.StreamAsync<JObject>(filter: strict);
+
+            stream.Select(jObject => LogEventReader.ReadFromJObject(jObject))
+                .Subscribe(evt => {
+                    string command = evt.RenderMessage();
+                    command = command.Trim(new char[] {'"'});
+                    Consolequeue.Enqueue(command);
+                });
+
+            await stream;
+        }
         private static void StartHooks()
         {
             // On run end
-            // LogTime and LogStagesCleared won't be needed after stats are done
-            RunReport.Generate += (orig, run, resulttype) =>
+            On.RoR2.RunReport.Generate += (orig, run, resulttype) =>
             {
-                var valid = orig(run, resulttype); // Required if the hooked command has a return value
+                RunReport valid = orig(run, resulttype); // Required if the hooked command has a return value
 
                 foreach (var user in NetworkUser.readOnlyInstancesList)
-                    new Thread(delegate() { GetStats(user); }).Start();
+                {
+                    GetStats(user);
+                }
+
                 return valid; // Required if the hooked command has a return value
             };
 
             // On player leave
-            // LogTime and LogStagesCleared won't be needed after stats are done
-            GameNetworkManager.OnServerDisconnect += (orig, run, conn) =>
+            On.RoR2.Networking.GameNetworkManager.OnServerDisconnect += (orig, run, conn) =>
             {
                 if (Run.instance)
                 {
-                    var user = FindNetworkUserForConnectionServer(conn);
-                    new Thread(delegate() { GetStats(user); }).Start();
+                    NetworkUser user = FindNetworkUserForConnectionServer(conn);
+                    GetStats(user);
                 }
-
                 orig(run, conn);
             };
+
+            // On scene change (unloaded, new scene not yet loaded)
+            On.RoR2.FadeToBlackManager.OnSceneUnloaded += (orig, run) =>
+            {
+                orig(run);
+                if (!Run.instance) return;
+                LogTime();
+                LogStagesCleared();
+            };
+
+        }
+
+        private static void LogTime()
+        {
+            if (!Run.instance)
+            {
+                throw new ConCommandException("No run is currently in progress.");
+            }
+            Debug.Log("Run time is " + Run.instance.GetRunStopwatch().ToString());
+        }
+
+        private static void LogStagesCleared()
+        {
+            if (!Run.instance)
+            {
+                throw new ConCommandException("No run is currently in progress.");
+            }
+            Debug.Log("Stages cleared: " + Run.instance.NetworkstageClearCount.ToString());
         }
 
         private static void GetStats(NetworkUser user)
@@ -148,16 +195,15 @@ namespace BotCMDs
             // Unity variables
             var playerMasterObject = user.masterObject;
             var steamId = Convert.ToInt64(user.id.steamId.ToString());
-            StatSheet statSheet;
             var component = playerMasterObject.GetComponent<PlayerStatsComponent>();
-            statSheet = component?.currentStats;
+            var statSheet = component?.currentStats;
             var sendToDynamo = new Dictionary<string, string>();
             // Creates the array of the run report
             var array = new string[statSheet.fields.Length];
             // Iterates through the run report to add to a dictionary
             for (var i = 0; i < array.Length; i++)
             {
-                array[i] = string.Format("[\"{0}\"]={1}", statSheet.fields[i].name, statSheet.fields[i].ToString());
+                array[i] = $"[\"{statSheet.fields[i].name}\"]={statSheet.fields[i].ToString()}";
                 if (statSheet.fields[i].ToString() == "0")
                 {
                 }
@@ -174,13 +220,25 @@ namespace BotCMDs
             var result = string.Join(" ", sendToDynamo.Select(kvp => $"{kvp.Key},{kvp.Value}"));
             // Use ProcessStartInfo class
             var path = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-            var startInfo = new ProcessStartInfo();
-            startInfo.CreateNoWindow = true;
-            startInfo.UseShellExecute = false;
-            startInfo.FileName = path + @"\BotCommands_Dynamo.exe";
-            startInfo.WindowStyle = ProcessWindowStyle.Hidden;
-            startInfo.Arguments = result;
-            Log.LogError(result);
+#if DEBUG
+            var startInfo = new ProcessStartInfo
+            {
+                CreateNoWindow = false,
+                UseShellExecute = true,
+                FileName = path + @"\BotCommands_Dynamo.exe",
+                WindowStyle = ProcessWindowStyle.Normal,
+                Arguments = result
+            };
+#else
+            var startInfo = new ProcessStartInfo
+            {
+                CreateNoWindow = true,
+                UseShellExecute = false,
+                FileName = path + @"\BotCommands_Dynamo.exe",
+                WindowStyle = ProcessWindowStyle.Hidden,
+                Arguments = result
+            };
+#endif
             try
             {
                 // Start the process with the info we specified.
@@ -201,22 +259,6 @@ namespace BotCMDs
             return NetworkUser.readOnlyInstancesList.FirstOrDefault(networkUser =>
                 networkUser.connectionToClient == connection);
         }
-
-        // TODO: Finish command, currently generated code is sent to everyone
-        // TODO: Need to add new database to Dynamo to store temporary auth codes and add a argument to BotCommands_Dynamo to know when we are sending an auth code
-        // Link command
-        [ConCommand(commandName = "Link", flags = ConVarFlags.ExecuteOnServer,
-            helpText = "Generates a random code to link your account on Discord")]
-        private static void LinkCommand(ConCommandArgs args)
-        {
-            var random = new Random();
-            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-            var stringChars = new char[4];
-
-            for (var i = 0; i < stringChars.Length; i++) stringChars[i] = chars[random.Next(chars.Length)];
-
-            var finalString = new string(stringChars);
-            RoR2.Chat.AddMessage("Your link code is " + finalString);
-        }
+        
     }
 }

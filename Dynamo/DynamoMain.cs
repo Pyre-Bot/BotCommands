@@ -1,7 +1,7 @@
 ﻿using System;
+using System.Threading;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DocumentModel;
 using Amazon.DynamoDBv2.Model;
@@ -28,11 +28,11 @@ namespace BotCommands_Dynamo
             long ID = 123456789;
             // Declares variable to be used later
             var serverName = "";
-            
-            
+
+
             // Sets desired throughput, in this case 5 in, 5 out
             var tableProvisionedThroughput = new ProvisionedThroughput(5, 5);
-            
+
             // Stat objects
             // Primary key info
             var itemAttributes = new List<AttributeDefinition>
@@ -73,7 +73,7 @@ namespace BotCommands_Dynamo
 
             // Variables used for DynamoDB table
             const string dbTableName = "BotCommands_Stats";
-            
+
             // Turns dictionary into JSON
             var statsJson = JsonConvert.SerializeObject(statsDictionary);
 
@@ -81,7 +81,7 @@ namespace BotCommands_Dynamo
             Console.WriteLine(" -- Attempting to connect to the database --");
             // Create connection to the database
             // Progress variable is used to determine if the script can continue or something failed
-            _progress = createClient(false);
+            _progress = CreateClient(false);
             if (!_progress) return;
             // Checks if table exists otherwise makes it
             // TODO: Consider removing this?
@@ -97,15 +97,13 @@ namespace BotCommands_Dynamo
             }
 
             // Add stats to the table
-            var newItemDocument = new Document();
-            newItemDocument["SteamID64"] = ID;
-            newItemDocument[serverName] = Document.FromJson(statsJson);
+            var newItemDocument = new Document {["SteamID64"] = ID, [serverName] = Document.FromJson(statsJson)};
             AddNewItem(newItemDocument).Wait();
 
             // Rest of the program updates stats, don't update if not needed
             if (!_progress)
                 return;
             UpdateStats(ID, serverName, statsDictionary).Wait();
-            }
+        }
     }
 }
