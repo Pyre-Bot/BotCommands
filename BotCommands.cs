@@ -23,7 +23,8 @@ using System.Reactive.Linq;
 namespace BotCMDs
 {
     [BepInDependency("com.bepis.r2api")]
-    [BepInPlugin("com.Rayss.BotCommands", "BotCommands", "0.3.0")]
+    [NetworkCompatibility(CompatibilityLevel.NoNeedForSync)]  // Makes it so that the client doesn't need to run this mod to connect to the server
+    [BepInPlugin("com.Rayss.BotCommands", "BotCommands", "0.4.0")]
     [R2APISubmoduleDependency(nameof(CommandHelper))]
     public partial class BotCommands : BaseUnityPlugin
     {
@@ -97,7 +98,7 @@ namespace BotCMDs
         private void Start()
         {
             StartHooks();
-            SeqLogRead(_seqserver, _seqapi, _seqfilter); // Having the filter to a plain value seems to give me a WebSocketException
+            SeqLogRead(_seqserver, _seqapi, _seqfilter);
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Code Quality", "IDE0051:Remove unused private members")]
@@ -105,11 +106,11 @@ namespace BotCMDs
         {
             if (Consolequeue.Count > 0)
             {
-                RoR2.Console.instance.SubmitCmd(null, Consolequeue.Dequeue());
+                var consoleUser = new RoR2.Console.CmdSender();
+                RoR2.Console.instance.SubmitCmd(consoleUser, Consolequeue.Dequeue());
             }
         }
 
-        // TODO: Add the option for multiple filter values, so we can use admin and commands channels
         private async void SeqLogRead(string server, string apiKey, string filter)
         {
 #if DEBUG
@@ -140,14 +141,14 @@ namespace BotCMDs
             // On run end
             On.RoR2.RunReport.Generate += (orig, run, resulttype) =>
             {
-                RunReport valid = orig(run, resulttype); // Required if the hooked command has a return value
+                RunReport valid = orig(run, resulttype);
 
                 foreach (var user in NetworkUser.readOnlyInstancesList)
                 {
                     GetStats(user);
                 }
 
-                return valid; // Required if the hooked command has a return value
+                return valid;
             };
 
             // On player leave
