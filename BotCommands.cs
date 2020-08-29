@@ -59,7 +59,7 @@ namespace BotCMDs
             Servername = Config.Bind<string>(
                 "Config",
                 "Server Name",
-                "ServerTest",
+                "Server1",
                 "Enter the name of your server for stats tracking"
             );
             _serverName = Servername.Value;
@@ -193,59 +193,66 @@ namespace BotCMDs
 
         private static void GetStats(NetworkUser user)
         {
-            // Unity variables
-            var playerMasterObject = user.masterObject;
-            var steamId = Convert.ToInt64(user.id.steamId.ToString());
-            var component = playerMasterObject.GetComponent<PlayerStatsComponent>();
-            var statSheet = component?.currentStats;
-            var sendToDynamo = new Dictionary<string, string>();
-            // Creates the array of the run report
-            var array = new string[statSheet.fields.Length];
-            // Iterates through the run report to add to a dictionary
-            for (var i = 0; i < array.Length; i++)
+            try  // Done to prevent users with no masterobject (spectators) from causing a NullReferenceException
             {
-                array[i] = $"[\"{statSheet.fields[i].name}\"]={statSheet.fields[i].ToString()}";
-                if (statSheet.fields[i].ToString() == "0")
+                // Unity variables
+                var playerMasterObject = user.masterObject; 
+                var steamId = Convert.ToInt64(user.id.steamId.ToString());
+                var component = playerMasterObject.GetComponent<PlayerStatsComponent>();
+                var statSheet = component?.currentStats;
+                var sendToDynamo = new Dictionary<string, string>();
+                // Creates the array of the run report
+                var array = new string[statSheet.fields.Length];
+                // Iterates through the run report to add to a dictionary
+                for (var i = 0; i < array.Length; i++)
                 {
+                    array[i] = $"[\"{statSheet.fields[i].name}\"]={statSheet.fields[i].ToString()}";
+                    if (statSheet.fields[i].ToString() == "0")
+                    {
+                    }
+                    else
+                    {
+                        sendToDynamo[statSheet.fields[i].name] = statSheet.fields[i].ToString();
+                    }
                 }
-                else
-                {
-                    sendToDynamo[statSheet.fields[i].name] = statSheet.fields[i].ToString();
-                }
-            }
 
-            // Adds server and SteamID to dictionary
-            sendToDynamo["Server"] = _serverName;
-            sendToDynamo["SteamID"] = steamId.ToString();
-            // Splits the dictionary into a string that can be used as an argument
-            var result = string.Join(" ", sendToDynamo.Select(kvp => $"{kvp.Key},{kvp.Value}"));
-            // Use ProcessStartInfo class
-            var path = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-#if DEBUG
-            var startInfo = new ProcessStartInfo
-            {
-                CreateNoWindow = false,
-                UseShellExecute = true,
-                FileName = path + @"\BotCommands_Dynamo.exe",
-                WindowStyle = ProcessWindowStyle.Normal,
-                Arguments = result
-            };
-#else
-            var startInfo = new ProcessStartInfo
-            {
-                CreateNoWindow = true,
-                UseShellExecute = false,
-                FileName = path + @"\BotCommands_Dynamo.exe",
-                WindowStyle = ProcessWindowStyle.Hidden,
-                Arguments = result
-            };
-#endif
-            try
-            {
-                // Start the process with the info we specified.
-                using (var exeProcess = Process.Start(startInfo))
+                // Adds server and SteamID to dictionary
+                sendToDynamo["Server"] = _serverName;
+                sendToDynamo["SteamID"] = steamId.ToString();
+                // Splits the dictionary into a string that can be used as an argument
+                var result = string.Join(" ", sendToDynamo.Select(kvp => $"{kvp.Key},{kvp.Value}"));
+                // Use ProcessStartInfo class
+                var path = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+    #if DEBUG
+                var startInfo = new ProcessStartInfo
                 {
-                    Log.LogInfo("BotCommands: Updating stats database!");
+                    CreateNoWindow = false,
+                    UseShellExecute = true,
+                    FileName = path + @"\BotCommands_Dynamo.exe",
+                    WindowStyle = ProcessWindowStyle.Normal,
+                    Arguments = result
+                };
+    #else
+                var startInfo = new ProcessStartInfo
+                {
+                    CreateNoWindow = true,
+                    UseShellExecute = false,
+                    FileName = path + @"\BotCommands_Dynamo.exe",
+                    WindowStyle = ProcessWindowStyle.Hidden,
+                    Arguments = result
+                };
+    #endif
+                try
+                {
+                    // Start the process with the info we specified.
+                    using (var exeProcess = Process.Start(startInfo))
+                    {
+                        Log.LogInfo("BotCommands: Updating stats database!");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.LogError($"BotCommands: {ex.Message}");
                 }
             }
             catch (Exception ex)
